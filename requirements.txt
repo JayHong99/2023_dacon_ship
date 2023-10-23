@@ -1,0 +1,13 @@
+pandas
+numpy
+einops
+scikit-learn
+torch
+scipy
+matplotlib
+seaborn
+einops
+gpustat
+tqdm
+hyperopt
+lightgbm
