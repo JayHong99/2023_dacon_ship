@@ -5,6 +5,9 @@ import numpy as np
 import torch
 from torch import nn
 from sklearn.linear_model import LinearRegression
+from tqdm import tqdm
+
+from .loss import NTXent
 
 def pick_gpu_lowest_memory():
     import gpustat
@@ -17,18 +20,17 @@ def pick_gpu_lowest_memory():
 def train_epoch(model, optimizer, train_loader, device) : 
     model.train()
     linreg = LinearRegression()
-    criterion = CLIPLoss(temperature=0.1)
+    # criterion = CLIPLoss(temperature=0.1)
+    criterion = NTXent(temperature=0.1)
     total_loss, total_mae = 0, 0
-    for X_cat_origin, X_cat_corrupt, X_con_origin, X_con_corrupt, y_num in train_loader: 
-        X_cat_origin = X_cat_origin.to(device, non_blocking=True)
-        X_cat_corrupt = X_cat_corrupt.to(device, non_blocking=True)
-        X_con_origin = X_con_origin.to(device, non_blocking=True)
-        X_con_corrupt = X_con_corrupt.to(device, non_blocking=True)
+    for X_origin, X_random, y_num in train_loader: 
+        X_origin = X_origin.to(device, non_blocking=True)
+        X_random = X_random.to(device, non_blocking=True)
         y_num = y_num.to(device, non_blocking=True)
-
-        z0, emb = model(X_cat_origin, X_con_origin)
-        z1,   _ = model(X_cat_corrupt, X_con_corrupt)
-        loss, _, _ = criterion(z0, z1, y_num)
+        
+        emb, emb_corruptted = model(X_origin, X_random)
+        
+        loss = criterion(emb, emb_corruptted)
     
         optimizer.zero_grad()
         loss.backward()
@@ -44,19 +46,18 @@ def train_epoch(model, optimizer, train_loader, device) :
 
 def evaluate_epoch(model, eval_loader, device, linreg = None) :
     model.eval()
-    criterion = CLIPLoss(temperature=0.1)
+    # criterion = CLIPLoss(temperature=0.1)
+    criterion = NTXent(temperature=0.1)
     total_loss, total_mae = 0, 0
     with torch.no_grad() : 
-        for X_cat_origin, X_cat_corrupt, X_con_origin, X_con_corrupt, y_num in eval_loader : 
-            X_cat_origin = X_cat_origin.to(device, non_blocking=True)
-            X_cat_corrupt = X_cat_corrupt.to(device, non_blocking=True)
-            X_con_origin = X_con_origin.to(device, non_blocking=True)
-            X_con_corrupt = X_con_corrupt.to(device, non_blocking=True)
+        for X_origin, X_random, y_num in eval_loader: 
+            X_origin = X_origin.to(device, non_blocking=True)
+            X_random = X_random.to(device, non_blocking=True)
             y_num = y_num.to(device, non_blocking=True)
             
-            z0, emb = model(X_cat_origin, X_con_origin)
-            z1,   _ = model(X_cat_corrupt, X_con_corrupt)
-            loss, logits, labels = criterion(z0, z1, y_num)
+            emb, emb_corruptted = model(X_origin, X_random)
+            
+            loss = criterion(emb, emb_corruptted)
             
             _, simple_mae = simple_acc_with_logreg(emb, y_num, linreg) if linreg is not None else (None, 0)
             total_loss += loss.item()

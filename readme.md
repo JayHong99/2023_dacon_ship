@@ -26,6 +26,6 @@ Name: CI_HOUR, dtype: float64
 
 
 # Modeling
-Self-supervised Contrastive Learning for Feature Extraction by SCARF (https://github.com/yfeng95/SCARF)
+Self-supervised Contrastive Learning for Feature Extraction by SCARF (https://github.com/clabrugere/pytorch-scarf)
 
 --> simple 2-layer MLP + Machine Learning
